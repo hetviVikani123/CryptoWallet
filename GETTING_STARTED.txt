@@ -1,0 +1,704 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║                    🚀 CRYPTO WALLET - GETTING STARTED GUIDE                  ║
+║                                                                               ║
+║                         Complete Setup Instructions                          ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+📋 TABLE OF CONTENTS
+════════════════════════════════════════════════════════════════════════════════
+1. Prerequisites
+2. Project Structure
+3. Quick Start (5 Minutes)
+4. Detailed Setup Instructions
+5. Configuration Guide
+6. Running the Application
+7. Default Admin Credentials
+8. Testing the Application
+9. Troubleshooting
+10. Production Deployment
+11. Important Notes
+
+
+═══════════════════════════════════════════════════════════════════════════════
+1. PREREQUISITES
+═══════════════════════════════════════════════════════════════════════════════
+
+Before you begin, ensure you have the following installed:
+
+✅ Node.js (v18.0.0 or higher)
+   Download: https://nodejs.org/
+
+✅ npm (comes with Node.js) or yarn
+   Check version: npm -v
+
+✅ Git (optional, for version control)
+   Download: https://git-scm.com/
+
+✅ A code editor (VS Code recommended)
+   Download: https://code.visualstudio.com/
+
+✅ A Supabase account (FREE)
+   Sign up: https://supabase.com/
+
+✅ A Gmail account (for email notifications)
+   Create app password: https://myaccount.google.com/apppasswords
+
+
+═══════════════════════════════════════════════════════════════════════════════
+2. PROJECT STRUCTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+cryptowallet/
+├── backend/              # Express.js REST API
+│   ├── src/
+│   │   ├── controllers/  # Route controllers
+│   │   ├── models/       # Database models
+│   │   ├── routes/       # API routes
+│   │   ├── middleware/   # Auth, error handling
+│   │   ├── services/     # Business logic
+│   │   └── config/       # Configuration files
+│   ├── .env             # Backend environment variables (CREATE THIS)
+│   └── package.json
+│
+├── frontend/            # Next.js 15 with React 19
+│   ├── app/            # Next.js app directory
+│   │   ├── auth/       # Login, Register pages
+│   │   ├── admin/      # Admin dashboard
+│   │   ├── dashboard/  # User dashboard
+│   │   ├── wallet/     # Wallet management
+│   │   ├── transfer/   # Money transfer
+│   │   └── ...
+│   ├── components/     # Reusable React components
+│   ├── lib/           # Utilities and API client
+│   ├── .env.local     # Frontend environment variables (CREATE THIS)
+│   └── package.json
+│
+├── GETTING_STARTED.txt  # This file
+└── README.md           # Project documentation
+
+
+═══════════════════════════════════════════════════════════════════════════════
+3. QUICK START (5 MINUTES)
+═══════════════════════════════════════════════════════════════════════════════
+
+Follow these steps to get the application running quickly:
+
+STEP 1: Extract the ZIP file
+────────────────────────────────────────────────────────────────────────────────
+Extract the project to a folder of your choice (e.g., C:\Projects\cryptowallet)
+
+
+STEP 2: Install Dependencies
+────────────────────────────────────────────────────────────────────────────────
+Open TWO terminal windows in the project root:
+
+Terminal 1 - Backend:
+  cd backend
+  npm install
+
+Terminal 2 - Frontend:
+  cd frontend
+  npm install
+
+
+STEP 3: Set Up Supabase Database (2 minutes)
+────────────────────────────────────────────────────────────────────────────────
+1. Go to https://supabase.com/ and create a FREE account
+2. Create a new project (choose any region close to you)
+3. Wait 2 minutes for the project to initialize
+4. Go to Project Settings → API
+5. Copy the following:
+   - Project URL (looks like: https://xxxxx.supabase.co)
+   - anon/public key (starts with: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...)
+   - service_role key (starts with: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...)
+
+6. Go to SQL Editor in Supabase
+7. Create the database tables by running this SQL:
+
+   -- Users table
+   CREATE TABLE users (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     name VARCHAR(255) NOT NULL,
+     email VARCHAR(255) UNIQUE NOT NULL,
+     phone VARCHAR(20),
+     password VARCHAR(255) NOT NULL,
+     wallet_id VARCHAR(50) UNIQUE NOT NULL,
+     balance DECIMAL(15, 2) DEFAULT 0.00,
+     role VARCHAR(20) DEFAULT 'user',
+     status VARCHAR(20) DEFAULT 'pending',
+     is_verified BOOLEAN DEFAULT false,
+     created_at TIMESTAMP DEFAULT NOW(),
+     updated_at TIMESTAMP DEFAULT NOW(),
+     last_login TIMESTAMP
+   );
+
+   -- Transactions table
+   CREATE TABLE transactions (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     from_user_id UUID REFERENCES users(id),
+     to_user_id UUID REFERENCES users(id),
+     amount DECIMAL(15, 2) NOT NULL,
+     type VARCHAR(50) NOT NULL,
+     status VARCHAR(20) DEFAULT 'pending',
+     description TEXT,
+     created_at TIMESTAMP DEFAULT NOW()
+   );
+
+   -- OTPs table
+   CREATE TABLE otps (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID REFERENCES users(id),
+     email VARCHAR(255) NOT NULL,
+     otp VARCHAR(6) NOT NULL,
+     type VARCHAR(50) NOT NULL,
+     expires_at TIMESTAMP NOT NULL,
+     created_at TIMESTAMP DEFAULT NOW()
+   );
+
+   -- Support Tickets table
+   CREATE TABLE support_tickets (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID REFERENCES users(id),
+     subject VARCHAR(255) NOT NULL,
+     category VARCHAR(100) NOT NULL,
+     message TEXT NOT NULL,
+     status VARCHAR(20) DEFAULT 'open',
+     created_at TIMESTAMP DEFAULT NOW(),
+     updated_at TIMESTAMP DEFAULT NOW()
+   );
+
+   -- Create indexes for performance
+   CREATE INDEX idx_users_email ON users(email);
+   CREATE INDEX idx_users_wallet_id ON users(wallet_id);
+   CREATE INDEX idx_transactions_from_user ON transactions(from_user_id);
+   CREATE INDEX idx_transactions_to_user ON transactions(to_user_id);
+   CREATE INDEX idx_otps_email ON otps(email);
+
+
+STEP 4: Configure Environment Variables
+────────────────────────────────────────────────────────────────────────────────
+
+A) Backend Configuration (backend/.env):
+   
+   1. Navigate to backend/ folder
+   2. Copy .env.example to .env:
+      cp .env.example .env   (Mac/Linux)
+      copy .env.example .env  (Windows)
+   
+   3. Edit backend/.env and update these REQUIRED values:
+   
+      SUPABASE_URL=https://your-project-ref.supabase.co
+      SUPABASE_ANON_KEY=your-anon-key-from-step-3
+      SUPABASE_SERVICE_KEY=your-service-role-key-from-step-3
+      
+      JWT_SECRET=your-random-64-char-string-here
+      JWT_REFRESH_SECRET=another-random-64-char-string-here
+      
+      EMAIL_USER=your-email@gmail.com
+      EMAIL_PASSWORD=your-gmail-app-password
+      EMAIL_FROM=CryptoWallet <your-email@gmail.com>
+
+   💡 Generate JWT secrets:
+      node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+   💡 Get Gmail App Password:
+      1. Enable 2-Step Verification on your Google account
+      2. Go to: https://myaccount.google.com/apppasswords
+      3. Create an app password for "Mail"
+      4. Use the 16-character password (without spaces)
+
+
+B) Frontend Configuration (frontend/.env.local):
+   
+   1. Navigate to frontend/ folder
+   2. Copy .env.example to .env.local:
+      cp .env.example .env.local   (Mac/Linux)
+      copy .env.example .env.local  (Windows)
+   
+   3. Edit frontend/.env.local and update:
+   
+      NEXT_PUBLIC_API_URL=http://localhost:5000/api
+      NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-from-step-3
+
+
+STEP 5: Run the Application
+────────────────────────────────────────────────────────────────────────────────
+
+Terminal 1 - Start Backend:
+  cd backend
+  npm run dev
+
+  ✅ Backend should start on: http://localhost:5000
+  ✅ You should see: "Server running on port 5000"
+
+
+Terminal 2 - Start Frontend:
+  cd frontend
+  npm run dev
+
+  ✅ Frontend should start on: http://localhost:3000 or http://localhost:3003
+  ✅ Open the URL shown in your browser
+
+
+STEP 6: Create Admin Account
+────────────────────────────────────────────────────────────────────────────────
+
+1. Open your browser and go to: http://localhost:3000/auth/register
+2. Register with these credentials:
+   Email: admin@cryptowallet.com
+   Password: Admin@123
+   Name: Admin User
+   Phone: Your phone number
+
+3. Check your email for OTP verification
+4. After verification, manually update the user role in Supabase:
+   - Go to Supabase Dashboard → Table Editor → users
+   - Find your admin user
+   - Change role from 'user' to 'admin'
+   - Save changes
+
+5. Now login at: http://localhost:3000/admin/login
+   Email: admin@cryptowallet.com
+   Password: Admin@123
+
+
+═══════════════════════════════════════════════════════════════════════════════
+4. DETAILED SETUP INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+If you want more control or need to customize the setup:
+
+A) BACKEND SETUP
+────────────────────────────────────────────────────────────────────────────────
+
+1. Navigate to backend directory:
+   cd backend
+
+2. Install all dependencies:
+   npm install
+
+3. Dependencies installed:
+   - express: Web framework
+   - typescript: Type safety
+   - @supabase/supabase-js: Database client
+   - jsonwebtoken: JWT authentication
+   - bcryptjs: Password hashing
+   - nodemailer: Email service
+   - winston: Logging
+   - express-rate-limit: Rate limiting
+   - cors: Cross-origin requests
+   - dotenv: Environment variables
+
+4. Configure environment variables (see STEP 4 above)
+
+5. Optional: Run database seed (creates sample data):
+   npm run seed
+
+6. Start development server:
+   npm run dev
+
+   Or for production:
+   npm run build
+   npm start
+
+
+B) FRONTEND SETUP
+────────────────────────────────────────────────────────────────────────────────
+
+1. Navigate to frontend directory:
+   cd frontend
+
+2. Install all dependencies:
+   npm install
+
+3. Dependencies installed:
+   - next: React framework (v15.5.5)
+   - react: UI library (v19)
+   - typescript: Type safety
+   - tailwindcss: Styling (v4)
+   - framer-motion: Animations
+   - recharts: Charts and graphs
+   - lucide-react: Icons
+   - react-hot-toast: Notifications
+
+4. Configure environment variables (see STEP 4 above)
+
+5. Start development server:
+   npm run dev
+
+   Or build for production:
+   npm run build
+   npm start
+
+
+═══════════════════════════════════════════════════════════════════════════════
+5. CONFIGURATION GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+REQUIRED CONFIGURATION:
+────────────────────────────────────────────────────────────────────────────────
+
+✅ Supabase Database:
+   - SUPABASE_URL
+   - SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_KEY
+   
+   Get these from: Supabase Dashboard → Settings → API
+
+✅ JWT Secrets:
+   - JWT_SECRET (min 64 characters)
+   - JWT_REFRESH_SECRET (min 64 characters)
+   
+   Generate: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+✅ Email Service:
+   - EMAIL_USER (your Gmail)
+   - EMAIL_PASSWORD (Gmail App Password)
+   - EMAIL_FROM
+   
+   Setup: https://myaccount.google.com/apppasswords
+
+
+OPTIONAL CONFIGURATION:
+────────────────────────────────────────────────────────────────────────────────
+
+🔹 Twilio SMS (for SMS OTP):
+   - TWILIO_ACCOUNT_SID
+   - TWILIO_AUTH_TOKEN
+   - TWILIO_PHONE_NUMBER
+   
+   Get these from: https://console.twilio.com/
+
+🔹 Cloudinary (for file uploads):
+   - CLOUDINARY_CLOUD_NAME
+   - CLOUDINARY_API_KEY
+   - CLOUDINARY_API_SECRET
+   
+   Get these from: https://cloudinary.com/console
+
+🔹 Firebase (for push notifications):
+   - FIREBASE_PROJECT_ID
+   - FIREBASE_CLIENT_EMAIL
+   - FIREBASE_PRIVATE_KEY
+   
+   Get these from: Firebase Console → Project Settings
+
+🔹 Redis (for sessions and caching):
+   - REDIS_HOST
+   - REDIS_PORT
+   - REDIS_PASSWORD
+   
+   Install Redis: https://redis.io/download
+
+
+═══════════════════════════════════════════════════════════════════════════════
+6. RUNNING THE APPLICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+DEVELOPMENT MODE:
+────────────────────────────────────────────────────────────────────────────────
+
+Backend (Terminal 1):
+  cd backend
+  npm run dev
+  
+  Server runs on: http://localhost:5000
+  API endpoints: http://localhost:5000/api/*
+
+Frontend (Terminal 2):
+  cd frontend
+  npm run dev
+  
+  App runs on: http://localhost:3000 or http://localhost:3003
+  Hot reload enabled ✅
+
+
+PRODUCTION MODE:
+────────────────────────────────────────────────────────────────────────────────
+
+Backend:
+  cd backend
+  npm run build
+  npm start
+
+Frontend:
+  cd frontend
+  npm run build
+  npm start
+
+
+DOCKER MODE (Optional):
+────────────────────────────────────────────────────────────────────────────────
+
+Development:
+  docker-compose -f docker-compose.dev.yml up
+
+Production:
+  docker-compose up
+
+
+═══════════════════════════════════════════════════════════════════════════════
+7. DEFAULT ADMIN CREDENTIALS
+═══════════════════════════════════════════════════════════════════════════════
+
+After creating your admin account in Supabase:
+
+Admin Login URL: http://localhost:3000/admin/login
+Email: admin@cryptowallet.com
+Password: Admin@123
+
+⚠️  IMPORTANT: Change the admin password after first login!
+
+User Login URL: http://localhost:3000/auth/login
+(Register new users at: http://localhost:3000/auth/register)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+8. TESTING THE APPLICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+USER FLOW:
+────────────────────────────────────────────────────────────────────────────────
+
+1. Register a new user:
+   - Go to: http://localhost:3000/auth/register
+   - Fill in: Name, Email, Phone, Password
+   - Click "Create Account"
+   - Check email for OTP
+   - Enter OTP to verify account
+
+2. Login:
+   - Go to: http://localhost:3000/auth/login
+   - Enter email
+   - Click "Send OTP"
+   - Check email for OTP
+   - Enter OTP to login
+
+3. User Dashboard:
+   - View balance
+   - See recent transactions
+   - Access wallet
+
+4. Transfer Money:
+   - Go to Transfer page
+   - Enter recipient's Wallet ID
+   - Enter amount
+   - Add note (optional)
+   - Confirm transfer
+
+5. View History:
+   - See all transactions
+   - Filter by type
+   - Search transactions
+
+
+ADMIN FLOW:
+────────────────────────────────────────────────────────────────────────────────
+
+1. Login as admin:
+   - Go to: http://localhost:3000/admin/login
+   - Enter admin credentials
+   - Click "Send OTP" (or use password)
+
+2. Admin Dashboard:
+   - View statistics (users, transactions, volume)
+   - See charts (transactions, revenue)
+   - View recent users
+   - View recent transactions
+
+3. User Management:
+   - Click eye icon to view user details
+   - Send custom email to users
+   - Suspend/Activate accounts
+
+4. Monitor Transactions:
+   - View all transactions
+   - Filter by status
+   - Export data
+
+
+═══════════════════════════════════════════════════════════════════════════════
+9. TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLEM: "Cannot find module" errors
+SOLUTION: 
+  cd backend && npm install
+  cd frontend && npm install
+
+
+PROBLEM: Backend won't start - "Port 5000 is already in use"
+SOLUTION: 
+  - Kill the process using port 5000
+  - Or change PORT in backend/.env to a different port (e.g., 5001)
+  - Update NEXT_PUBLIC_API_URL in frontend/.env.local accordingly
+
+
+PROBLEM: Frontend shows "Failed to fetch" error
+SOLUTION: 
+  1. Check if backend is running (http://localhost:5000)
+  2. Check CORS settings in backend/src/server.ts
+  3. Verify NEXT_PUBLIC_API_URL in frontend/.env.local
+  4. Check browser console for detailed error
+
+
+PROBLEM: Email not sending
+SOLUTION: 
+  1. Verify Gmail App Password is correct (16 characters, no spaces)
+  2. Enable "Less secure app access" or use App Password
+  3. Check backend logs for email errors
+  4. Test with: https://myaccount.google.com/apppasswords
+
+
+PROBLEM: OTP not received
+SOLUTION: 
+  1. Check spam/junk folder
+  2. Verify EMAIL_USER and EMAIL_PASSWORD in backend/.env
+  3. Check backend logs for errors
+  4. Verify email service is configured correctly
+
+
+PROBLEM: Database connection error
+SOLUTION: 
+  1. Verify Supabase credentials in .env files
+  2. Check if Supabase project is active
+  3. Ensure database tables are created (see STEP 3)
+  4. Check Supabase Dashboard → Database → Tables
+
+
+PROBLEM: "Module not found" for TypeScript
+SOLUTION: 
+  npm install --save-dev @types/node @types/express
+
+
+PROBLEM: Next.js build fails
+SOLUTION: 
+  1. Delete .next folder and node_modules
+  2. npm install
+  3. npm run build
+
+
+PROBLEM: Icons overlaying input fields
+SOLUTION: 
+  ✅ Already fixed! Global CSS rule applied in frontend/app/globals.css
+
+
+═══════════════════════════════════════════════════════════════════════════════
+10. PRODUCTION DEPLOYMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+RECOMMENDED PLATFORMS:
+────────────────────────────────────────────────────────────────────────────────
+
+Backend:
+  - Railway (https://railway.app) - Recommended
+  - Render (https://render.com)
+  - Heroku (https://heroku.com)
+  - AWS EC2
+  - DigitalOcean
+
+Frontend:
+  - Vercel (https://vercel.com) - Recommended for Next.js
+  - Netlify (https://netlify.com)
+  - Cloudflare Pages
+  - AWS Amplify
+
+
+DEPLOYMENT CHECKLIST:
+────────────────────────────────────────────────────────────────────────────────
+
+✅ Set NODE_ENV=production in backend/.env
+✅ Generate new JWT secrets for production
+✅ Update FRONTEND_URL in backend/.env
+✅ Update NEXT_PUBLIC_API_URL in frontend/.env.local
+✅ Enable HTTPS/SSL certificates
+✅ Set up domain names
+✅ Configure production database (Supabase)
+✅ Set up email service (Gmail, SendGrid, or AWS SES)
+✅ Enable rate limiting
+✅ Set up monitoring (Sentry, LogRocket)
+✅ Configure backups
+✅ Set up CI/CD pipeline (GitHub Actions)
+✅ Test all features in production
+
+
+DOCKER DEPLOYMENT:
+────────────────────────────────────────────────────────────────────────────────
+
+1. Build and run with Docker Compose:
+   docker-compose up --build
+
+2. Access the application:
+   Frontend: http://localhost
+   Backend: http://localhost/api
+
+3. Stop the containers:
+   docker-compose down
+
+
+═══════════════════════════════════════════════════════════════════════════════
+11. IMPORTANT NOTES
+═══════════════════════════════════════════════════════════════════════════════
+
+🔒 SECURITY:
+────────────────────────────────────────────────────────────────────────────────
+- Never commit .env files to Git
+- Use strong JWT secrets (min 64 characters)
+- Change default admin password immediately
+- Enable 2FA for admin accounts in production
+- Use HTTPS in production
+- Regularly update dependencies
+- Implement proper error handling
+
+
+📝 BEST PRACTICES:
+────────────────────────────────────────────────────────────────────────────────
+- Keep dependencies updated: npm update
+- Use environment variables for all secrets
+- Log errors properly (check backend/logs/)
+- Test features before deploying
+- Backup database regularly
+- Monitor application performance
+- Use Git for version control
+
+
+📚 DOCUMENTATION:
+────────────────────────────────────────────────────────────────────────────────
+- README.md: Project overview
+- API Documentation: backend/README.md
+- Component Documentation: frontend/README.md
+- Deployment Guide: DEPLOYMENT.md
+- Docker Guide: DOCKER_COMMANDS.md
+
+
+🆘 SUPPORT:
+────────────────────────────────────────────────────────────────────────────────
+- Check logs: backend/logs/combined.log
+- Check browser console for frontend errors
+- Review .env configuration
+- Ensure all required services are running
+- Check Supabase Dashboard for database issues
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+                           🎉 CONGRATULATIONS! 🎉
+
+              You're all set up and ready to use Crypto Wallet!
+
+         If you followed all steps, you should now have:
+         ✅ Backend running on http://localhost:5000
+         ✅ Frontend running on http://localhost:3000
+         ✅ Database configured in Supabase
+         ✅ Email service working
+         ✅ Admin account created
+
+                        Happy coding! 🚀
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Last Updated: October 31, 2025
+Version: 1.0.0
